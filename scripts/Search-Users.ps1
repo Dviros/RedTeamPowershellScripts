@@ -1,7 +1,7 @@
+# Mr.Un1k0d3r RingZer0 Team
+
 function Search-EventForUser {
-	# Mr.Un1k0d3r - RingZer0 Team 2016
-	# Search for a user through the events
-	
+
 	param(
 	[Parameter(Mandatory=$True, ValueFromPipeline=$true)]
 	[string]$TargetUser,
@@ -25,7 +25,7 @@ function Search-EventForUser {
 	PROCESS {
 		[System.Collections.ArrayList]$dcs = @() 
 		if($FindDC) {
-			Write-Output "[+] Enumrating all the DCs"
+			Write-Output "[+] Enumerating all the DCs"
 			ForEach($dc in [DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().DomainControllers) {
 				Write-Output "[+] DC found: $($dc.Name)"
 				$dcs.Add($dc.Name) | Out-Null
@@ -70,9 +70,7 @@ function Search-EventForUser {
 }
 
 function Search-FullNameToSamAccount {
-	# Mr.Un1k0d3r - RingZer0 Team 2017
-	# Get SamAccountName using displayname property search
-	
+
 	param(
 		[Parameter(Mandatory=$True, ValueFromPipeline=$True)]
 		[string]$Filter,
@@ -127,10 +125,12 @@ function Search-FullNameToSamAccount {
 
 function Ldap-GetProperty {
 	param(
-	[Parameter(Mandatory=$True, ValueFromPipeline=$True)]
-	[string]$Filter,
-	[Parameter(Mandatory=$True)]
-	[string]$Property
+		[Parameter(Mandatory=$True, ValueFromPipeline=$True)]
+		[string]$Filter,
+		[Parameter(Mandatory=$True)]
+		[string]$Property,
+		[Parameter(Mandatory=$False)]
+		[switch]$NoErrorReport = $False
 	)
 	
 	BEGIN {
@@ -149,36 +149,55 @@ function Ldap-GetProperty {
 		ForEach($Item in $DirSearch.FindAll()) {
 			$Data = $Item.Properties
 			Try {
-			$Element = New-Object -TypeName PSObject -Property @{
-				$Property = $Data.$Property[0]
-			}
+				$Element = New-Object -TypeName PSObject -Property @{
+					$Property = $Data.$Property[0]
+				}
 
-			$Output += $Element		
+				$Output += $Element		
 			} Catch {
-				Write-Output "[-] Property not found"
+				if(!$NoErrorReport) {
+					Write-Output "[-] Property not found"
+				}
 			}
 		}
 		return $Output
-	}
-	
+	}	
 }
 
 function Search-UserPassword {
 	
 	param(
-	[Parameter(Mandatory=$True, ValueFromPipeline=$True)]
-	[string]$UserName
+		[Parameter(Mandatory=$True, ValueFromPipeline=$True)]
+		[string]$UserName
 	)
-	
-	BEGIN {
-	
-	}
 	
 	PROCESS {
 		ForEach($User in $UserName) {
 			Write-Output "[*] $($User)"
 			Ldap-GetProperty -Filter "(&(objectCategory=User)(samaccountname=*$($User)*))" -Property "userpassword" | Format-Table -Wrap -AutoSize
 		}
+	}
+	
+	END {
+		Write-Output "[+] Process completed..."
+	}
+}
+
+function Dump-UserEmail {
+	
+	PROCESS {
+		Ldap-GetProperty -Filter "(&(objectCategory=User))" -Property "mail" -NoErrorReport | Format-Table -Wrap -AutoSize
+	}
+
+	END {
+		Write-Output "[+] Process completed..."
+	}
+}
+
+function Dump-UserName {
+		
+	PROCESS {
+		Ldap-GetProperty -Filter "(&(objectCategory=User))" -Property "samaccountname" -NoErrorReport | Format-Table -Wrap -AutoSize
 	}
 	
 	END {
